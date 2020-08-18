@@ -391,7 +391,7 @@
 ;	SetBrightness() Method, which may not be supported on laptops.
 ;
 ;	Example: 
-	SetGammaRamp() ; sets primary monitor to full gamma color output (100%) for all colors
+    SetGammaRamp() ; sets primary monitor to full gamma color output (100%) for all colors
     SetGammaRamp(70, 70, 70) ; minus 30 for all colors mimics native backlight brightness reduction
     SetGammaRamp(50, 50, 50) ; minus 20 for all colors mimics native backlight brightness reduction
     SetGammaRamp(90, 90, 90) ; plus  40 for all colors mimics native backlight brightness increase
