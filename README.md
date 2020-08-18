@@ -1,4 +1,5 @@
-```
+# AutoHotkey V2 Wrapper for Monitor Configuration WinAPI Functions
+```autohotkey
 ; =================================================================================================== ;
 ;
 ; [EXAMPLES AND DOCUMENTATION]
