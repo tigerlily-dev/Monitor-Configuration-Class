@@ -1,4 +1,5 @@
-AutoHotkey V2 Wrapper for Monitor Configuration WinAPI Functions
+# Monitor Configutation Class
+### AutoHotkey V2 Wrapper for Monitor Configuration WinAPI Functions
 
 [[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]
  
@@ -11,11 +12,15 @@ AutoHotkey V2 Wrapper for Monitor Configuration WinAPI Functions
  	(1) Included the Monitor Class within your script with or without 
  		using the #Include directive:
  
+ ```
  #Include "Monitor Class.ahk"
+ ```
   
  	(2) created a new class instance already in your script by using:
-  
+ 
+ ``` 
  mon := Monitor.New() ; Create new class instance
+ ```
  
  
   [[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]	
@@ -33,6 +38,7 @@ AutoHotkey V2 Wrapper for Monitor Configuration WinAPI Functions
   respective setting; e.g. "Contrast", "Red Gain", etc.), with the exception of the 
   following Methods:
   
+ ``` 
  GetInfo()
  GetGammaRamp()
  GetVCPFeatureAndReply()	
@@ -42,9 +48,14 @@ AutoHotkey V2 Wrapper for Monitor Configuration WinAPI Functions
  GetSupportedColorTemperatures()
  GetColorTemperature()
  GetTechnologyType()
+ ```
+ 
+ 
   GetBrightness() Method:
  
+ ```
  GetBrightness([Display])
+ ```
  
   Returns a Map object with details about a monitor's Brightness Level:
   the Current Value, as well as the Minumum Value and Maximum Value supported 
@@ -53,42 +64,52 @@ AutoHotkey V2 Wrapper for Monitor Configuration WinAPI Functions
   
   [PARAMETERS]
  
+ ```
  	DISPLAY (Optional, defaults to primary monitor)
  		Type:		 Integer or "String"
  		Description: The number or name of the monitor to query. If omitted,
  						defaults to primary monitor.
         Example:     Integer: 2 
                      String : "\\.\DISPLAY2"
+ ```
  
  
   A visualized structure of the Map object with key-value names:
  
+ ```
      -MAP{ key	           -value
  		  -["Minimum"]-MinimumValue   
  		  -["Current"]-CurrentValue  
  		  -["Maximum"]-MaximumValue  
  		  }
- 
+ ```
  	
   Example 1 - Return the Current Value, Minimum Value, and Maximum Value of
  			Brightness supported by the primary monitor:
  
+ ```
  InfoList := ""
  Brightness := mon.GetBrightness()
  for k, v in Brightness
  	InfoList .= k ":`n" v "`n`n"
  
  MsgBox InfoList
- 	
+ ```
+ 
   Example 2 - Return and display the Minimum Value of Brightness supported  
  			by monitor #1:
+    
+ ```   
  MsgBox MinBrightnessLevel := mon.GetBrightness(1)["MinimumValue"]
+ ```
  
   Example 3 - Return and display the Current Value of Brightness of
  			a specific monitor ("\\.\DISPLAY1"):
  
+ ```
  MsgBox CurrentBrightnessLevel := mon.GetBrightness("\\.\DISPLAY1")["CurrentValue"]
- 	
+ ```
+ 
  
     NOTE:
     The following Methods will function identically with the above
@@ -96,6 +117,7 @@ AutoHotkey V2 Wrapper for Monitor Configuration WinAPI Functions
     exception of instead affecting their respective setting  
  	(e.g. "Contrast", "Red Gain", "DisplayAreaWidth", etc.):
  
+ ```
  GetContrast()
  GetRedDrive()
  GetGreenDrive()
@@ -107,6 +129,7 @@ AutoHotkey V2 Wrapper for Monitor Configuration WinAPI Functions
  GetDisplayAreaHeight()
  GetDisplayAreaPositionHorizontal()
  GetDisplayAreaPositionVertical()
+ ```
  
   [[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]
  
