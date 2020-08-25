@@ -1,5 +1,9 @@
 # AutoHotkey V2 Wrapper for Monitor Configuration WinAPI Functions
 
+V2 AHK Forum Thread: https://www.autohotkey.com/boards/viewtopic.php?f=83&t=79220
+
+
+
 V1 GitHub Repo: https://github.com/jNizM/Class_Monitor
 
 V1 AHK Forum Thread: https://www.autohotkey.com/boards/viewtopic.php?f=6&t=7854
