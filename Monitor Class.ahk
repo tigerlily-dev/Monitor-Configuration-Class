@@ -735,3 +735,4 @@ class Monitor {
 		throw Error("Unable to save current monitor settings to non-volatile storage.`n`nError code: " Format("0x{:X}", A_LastError))
 	}	
 }
+
