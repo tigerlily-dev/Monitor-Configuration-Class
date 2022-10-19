@@ -26,7 +26,7 @@ V1 AHK Forum Thread: https://www.autohotkey.com/boards/viewtopic.php?f=6&t=7854
 ; 
 ;	(2) created a new class instance already in your script by using:
 ; 
-	mon := Monitor.New() ; Create new class instance
+	mon := Monitor() ; Create new class instance
 ;
 ;
 ; =================================================================================================== ;	
@@ -97,12 +97,12 @@ V1 AHK Forum Thread: https://www.autohotkey.com/boards/viewtopic.php?f=6&t=7854
 ; Example 2 - Return and display the Minimum Value of Brightness supported  
 ;			by monitor #1:
 
-	MsgBox MinBrightnessLevel := mon.GetBrightness(1)["MinimumValue"]
+	MsgBox MinBrightnessLevel := mon.GetBrightness(1)["Minimum"]
 	
 ; Example 3 - Return and display the Current Value of Brightness of
 ;			a specific monitor ("\\.\DISPLAY1"):
 	
-	MsgBox CurrentBrightnessLevel := mon.GetBrightness("\\.\DISPLAY1")["CurrentValue"]
+	MsgBox CurrentBrightnessLevel := mon.GetBrightness("\\.\DISPLAY1")["Current"]
 ;	
 ;
 ;   NOTE:
@@ -278,8 +278,8 @@ V1 AHK Forum Thread: https://www.autohotkey.com/boards/viewtopic.php?f=6&t=7854
 ;     -MAP{ key	           -value
 ;		  -["VCPCode"]	   -VCPCode  
 ;		  -["VCPCodeType"] -VCPCodeType  
-;		  -["CurrentValue"]-CurrentValue  
-;		  -["MaximumValue"]-MaximumValue  
+;		  -["Current"]     -CurrentValue  
+;		  -["Maximum"]     -MaximumValue  
 ;		  }
 ;
 ;	
@@ -300,12 +300,12 @@ V1 AHK Forum Thread: https://www.autohotkey.com/boards/viewtopic.php?f=6&t=7854
 ; Example 2 - Return and display the Minimum Value of Luminance (Brightness) 
 ;			supported by the primary monitor:
 
-	MsgBox MaxBrightnessLevel := mon.GetVCPFeatureAndReply(0x10)["MaximumValue"]
+	MsgBox MaxBrightnessLevel := mon.GetVCPFeatureAndReply(0x10)["Maximum"]
 	
 ; Example 3 - Return and display the Current Value of the Contrast of
 ;			monitor #2:
 	
-	MsgBox CurrentContrastLevel := mon.GetVCPFeatureAndReply(0x12, 2)["CurrentValue"]
+	MsgBox CurrentContrastLevel := mon.GetVCPFeatureAndReply(0x12, 2)["Current"]
 ;	
 ; =================================================================================================== ;
 
@@ -402,7 +402,7 @@ V1 AHK Forum Thread: https://www.autohotkey.com/boards/viewtopic.php?f=6&t=7854
 ;	SetBrightness() Method, which may not be supported on laptops.
 ;
 ;	Example: 
-    SetGammaRamp() ; sets primary monitor to full gamma color output (100%) for all colors
+	SetGammaRamp() ; sets primary monitor to full gamma color output (100%) for all colors
     SetGammaRamp(70, 70, 70) ; minus 30 for all colors mimics native backlight brightness reduction
     SetGammaRamp(50, 50, 50) ; minus 20 for all colors mimics native backlight brightness reduction
     SetGammaRamp(90, 90, 90) ; plus  40 for all colors mimics native backlight brightness increase
@@ -497,26 +497,6 @@ V1 AHK Forum Thread: https://www.autohotkey.com/boards/viewtopic.php?f=6&t=7854
 	
 	MsgBox GreenGammaLevel := mon.SetGammaRamp(50, 0, 0, "\\.\DISPLAY1")["Green"]
 ;	
-; Example 4 - In case you set your monitor to a point where it is unusable,
-;             it is wise to have a couple backup measures in place:
-;
-;   Consider having an emergency hotkey
-    !x::
-    {        
-        monitorCount := mon.GetInfo().Length ; Retreive total monitor count
-        Loop( monitorCount )
-            mon.SetGammaRamp( , , , A_Index)
-    }
-
-;   ...or an OnExit() function
-    OnExit("ResetGammaOutput")
-    ResetGammaOutput(*){
-
-        monitorCount := mon.GetInfo().Length
-        Loop( monitorCount ) 
-            mon.SetGammaRamp( , , , A_Index)
-            
-    }
 ;
 ; =================================================================================================== ;
 ```
