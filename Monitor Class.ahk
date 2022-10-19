@@ -51,7 +51,7 @@ class Monitor {
 	
 	GetVCPFeatureAndReply(VCPCode, Display := "") => this.GetSetting("GetVCPFeatureAndVCPFeatureReply", Display, VCPCode)	
 	
-    GetSharpness(Display := "") => this.GetSetting("GetVCPFeatureAndVCPFeatureReply", Display, 0x87)["Current"]
+	GetSharpness(Display := "") => this.GetSetting("GetVCPFeatureAndVCPFeatureReply", Display, 0x87)["Current"]
 
 	CapabilitiesRequestAndCapabilitiesReply(Display := "") => this.GetSetting("MonitorCapabilitiesRequestAndCapabilitiesReply", Display)
 	
@@ -182,7 +182,7 @@ class Monitor {
 	
 	SetVCPFeature(VCPCode, NewValue, Display := "") => this.SetSetting("SetMonitorVCPFeature", VCPCode, Display, NewValue)	
 	
-    SetSharpness(Sharpness, Display := "") => this.SetSetting("SetMonitorVCPFeature", 0x87, Display, Sharpness)
+	SetSharpness(Sharpness, Display := "") => this.SetSetting("SetMonitorVCPFeature", 0x87, Display, Sharpness)
 
 	SetColorTemperature(ColorTemperature, Display := ""){		
 		
@@ -383,61 +383,61 @@ class Monitor {
 	
 	GammaSetting(GammaMethodName, Red := "", Green := "", Blue := "", Display := ""){
     
-        MonitorInfo := this.EnumDisplayMonitors() ; might be able to find a better way to write this if-else code section below
+		MonitorInfo := this.EnumDisplayMonitors() ; might be able to find a better way to write this if-else code section below
 
-        if (!Display){                      ; if no display # is passed, default to primary
-            for Info in MonitorInfo {                                               
-                if (Info["Primary"]){                                  
-                    Display := A_Index                                 
-                    break                                              
-                }                                                                                 
-            }          
-        }
-        else if (!IsNumber(Display)){       ; if a display name is passed, determine which display # belongs to it
-            for Info in MonitorInfo {                                   
-                if (MonitorInfo[A_Index]["Name"] = Display){           
-                    Display := A_Index                                 
-                    break                                              
-                }       
-            }
-        }
+		if (!Display){                      ; if no display # is passed, default to primary
+		    for Info in MonitorInfo {                                               
+			if (Info["Primary"]){                                  
+			    Display := A_Index                                 
+			    break                                              
+			}                                                                                 
+		    }          
+		}
+		else if (!IsNumber(Display)){       ; if a display name is passed, determine which display # belongs to it
+		    for Info in MonitorInfo {                                   
+			if (MonitorInfo[A_Index]["Name"] = Display){           
+			    Display := A_Index                                 
+			    break                                              
+			}       
+		    }
+		}
 
-        if (Display > MonitorInfo.Length){  ; if an invalid monitor # is passed, default to primary monitor #             
-            for Info in MonitorInfo {                                               
-                if (Info["Primary"]){                                  
-                    Display := A_Index                                 
-                    break                                              
-                }                                                                                 
-            }          
-        }                    
+		if (Display > MonitorInfo.Length){  ; if an invalid monitor # is passed, default to primary monitor #             
+		    for Info in MonitorInfo {                                               
+			if (Info["Primary"]){                                  
+			    Display := A_Index                                 
+			    break                                              
+			}                                                                                 
+		    }          
+		}                    
 
-        if (hDC := this.CreateDC(MonitorInfo[Display]["Name"])){	
-            if (GammaMethodName = "SetDeviceGammaRamp"){
-                for Color in ["Red", "Green", "Blue"]{
-                    %Color% := (%Color% <    0)	?    0  ; ensure values passed are within the valid ranges
-                            :  (%Color% >  100) ?  100
-                            :  (%Color%)	
-                    %Color% := Round((2.56 * %Color%) - 128, 1) ; convert RGB values to decimal	(function-compatible)
-                }			
-                this.SetDeviceGammaRamp(hDC, Red, Green, Blue)
-                this.DeleteDC(hDC)
-                
-                for Color in ["Red", "Green", "Blue"]
-                    %Color% := Round((%Color% + 128) / 2.56, 1) ; convert RBG values back to percentage	(human-readable)
+		if (hDC := this.CreateDC(MonitorInfo[Display]["Name"])){	
+		    if (GammaMethodName = "SetDeviceGammaRamp"){
+			for Color in ["Red", "Green", "Blue"]{
+			    %Color% := (%Color% <    0)	?    0  ; ensure values passed are within the valid ranges
+				    :  (%Color% >  100) ?  100
+				    :  (%Color%)	
+			    %Color% := Round((2.56 * %Color%) - 128, 1) ; convert RGB values to decimal	(function-compatible)
+			}			
+			this.SetDeviceGammaRamp(hDC, Red, Green, Blue)
+			this.DeleteDC(hDC)
 
-                return Map("Red", Red, "Green", Green, "Blue", Blue)
-            }
-            else { ; if (GammaMethodName = "GetDeviceGammaRamp")
-                GammaRamp := this.GetDeviceGammaRamp(hDC)	
-                for Color, GammaLevel in GammaRamp		
-                    GammaRamp[Color] := Round((GammaLevel + 128) / 2.56, 1) ; convert RGB values to percentage (human-readable)
-                this.DeleteDC(hDC)
-                return GammaRamp
-            }			
-        
-        }
-        this.DeleteDC(hDC)
-        throw Error("Unable to get handle to Device Context.`n`nError code: " Format("0x{:X}", A_LastError))	
+			for Color in ["Red", "Green", "Blue"]
+			    %Color% := Round((%Color% + 128) / 2.56, 1) ; convert RBG values back to percentage	(human-readable)
+
+			return Map("Red", Red, "Green", Green, "Blue", Blue)
+		    }
+		    else { ; if (GammaMethodName = "GetDeviceGammaRamp")
+			GammaRamp := this.GetDeviceGammaRamp(hDC)	
+			for Color, GammaLevel in GammaRamp		
+			    GammaRamp[Color] := Round((GammaLevel + 128) / 2.56, 1) ; convert RGB values to percentage (human-readable)
+			this.DeleteDC(hDC)
+			return GammaRamp
+		    }			
+
+		}
+		this.DeleteDC(hDC)
+		throw Error("Unable to get handle to Device Context.`n`nError code: " Format("0x{:X}", A_LastError))	
 	}
 	
 	; ===== GET METHODS ===== ;
@@ -560,12 +560,12 @@ class Monitor {
 	
 	MonitorCapabilitiesRequestAndCapabilitiesReply(hMonitor, ASCIICapabilitiesString := "", CapabilitiesStrLen := 0){
 
-		if (CapabilitiesStrLen := this.GetMonitorCapabilitiesStringLength(hMonitor)){
-            ASCIICapabilitiesString := Buffer(CapabilitiesStrLen)
-            if (DllCall("dxva2\GetCapabilitiesStringLength", "ptr", hMonitor, "ptr", ASCIICapabilitiesString.Ptr, "uint", CapabilitiesStrLen))
-                return ASCIICapabilitiesString			
-		}
-        throw Error("Unable to retreive value.`n`nError code: " Format("0x{:X}", A_LastError))
+        	if (CapabilitiesStrLen := this.GetMonitorCapabilitiesStringLength(hMonitor)){
+        		ASCIICapabilitiesString := Buffer(CapabilitiesStrLen)
+		    	if (DllCall("dxva2\GetCapabilitiesStringLength", "ptr", hMonitor, "ptr", ASCIICapabilitiesString.Ptr, "uint", CapabilitiesStrLen))
+                		return ASCIICapabilitiesString			
+        	}
+        	throw Error("Unable to retreive value.`n`nError code: " Format("0x{:X}", A_LastError))
 	}	
 	
 	GetMonitorCapabilities(hMonitor, MonitorCapabilities := 0, SupportedColorTemperatures := 0){
