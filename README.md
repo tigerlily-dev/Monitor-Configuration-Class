@@ -297,7 +297,7 @@ V1 AHK Forum Thread: https://www.autohotkey.com/boards/viewtopic.php?f=6&t=7854
 ;	A Current Value of 2-4 = STANDBY / SUSPENDED / OFF
 ;	A Current Value of 5   = POWER OFF
 ;	
-; Example 2 - Return and display the Minimum Value of Luminance (Brightness) 
+; Example 2 - Return and display the Maximum Value of Luminance (Brightness) 
 ;			supported by the primary monitor:
 
 	MsgBox MaxBrightnessLevel := mon.GetVCPFeatureAndReply(0x10)["Maximum"]
