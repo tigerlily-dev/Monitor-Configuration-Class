@@ -1,15 +1,15 @@
-﻿; =================================================================================================== ;
-; AutoHotkey V2 a122 wrapper for Monitor Configuration API Functions (a111+ compatible)
+; =================================================================================================== ;
+; AutoHotkey V2.0-beta.12 Wrapper for Monitor Configuration WinAPI Functions
 ;
 ; Original Author ....: jNizM
 ; Released ...........: 2015-05-26
-; Modified ...........: 2020-08-17
-; Adapted By .........: tigerlily, CloakerSmoker
-; Version ............: 2.3.1
+; Modified ...........: 2022-10-19
+; Improved By ........: tigerlily, CloakerSmoker
+; Version ............: 2.4.1
+; Github .............: https://github.com/tigerlily-dev/Monitor-Configuration-Class
 ; Forum ..............: https://www.autohotkey.com/boards/viewtopic.php?f=83&t=79220
 ; License/Copyright ..: The Unlicense (https://unlicense.org)
 ;
-; [Change Log], [Pending], and [Remarks] sections can be found @ bottom of script
 ;
 ; =================================================================================================== ;
 
@@ -51,7 +51,7 @@ class Monitor {
 	
 	GetVCPFeatureAndReply(VCPCode, Display := "") => this.GetSetting("GetVCPFeatureAndVCPFeatureReply", Display, VCPCode)	
 	
-    GetSharpness(Display := "") => this.GetSetting("GetVCPFeatureAndVCPFeatureReply", Display, 0x87)["CurrentValue"]
+    GetSharpness(Display := "") => this.GetSetting("GetVCPFeatureAndVCPFeatureReply", Display, 0x87)["Current"]
 
 	CapabilitiesRequestAndCapabilitiesReply(Display := "") => this.GetSetting("MonitorCapabilitiesRequestAndCapabilitiesReply", Display)
 	
@@ -81,7 +81,7 @@ class Monitor {
 					SupportedCapabilities.Push(FlagDescription)
 			return SupportedCapabilities
 		}	
-		throw MC_CAPS[CapabilitiesFlags]
+		throw Error(MC_CAPS[CapabilitiesFlags])
 	}	
 	
 	GetSupportedColorTemperatures(Display := ""){
@@ -104,7 +104,7 @@ class Monitor {
 					SupportedColorTemperatures.Push(FlagDescription)
 			return SupportedColorTemperatures
 		}
-		throw MC_SUPPORTED_COLOR_TEMPERATURE[ColorTemperatureFlags]
+		throw Error(MC_SUPPORTED_COLOR_TEMPERATURE[ColorTemperatureFlags]) 
 	}	
 	
 	GetColorTemperature(Display := ""){
@@ -148,7 +148,7 @@ class Monitor {
 		0x04, "Off"     ,
 		0x05, "PowerOff")
 		
-		return PowerModes[this.GetSetting("GetVCPFeatureAndVCPFeatureReply", Display, 0xD6)["CurrentValue"]]
+		return PowerModes[this.GetSetting("GetVCPFeatureAndVCPFeatureReply", Display, 0xD6)["Current"]]
 	}
 	
 
@@ -212,7 +212,7 @@ class Monitor {
 		if (PowerModes.Has(PowerMode))
 			if (this.SetSetting("SetMonitorVCPFeature", 0xD6, Display, PowerModes[PowerMode]))
 				return PowerMode
-		throw Exception("An invalid [PowerMode] parameter was passed to the SetPowerMode() Method.")
+		throw Error("An invalid [PowerMode] parameter was passed to the SetPowerMode() Method.")
 	}		
 
 	; ===== VOID METHODS ===== ;
@@ -252,7 +252,7 @@ class Monitor {
 	
 	static GetMonitorInfo(hMonitor){ ; (MONITORINFO = 40 byte struct) + (MONITORINFOEX = 64 bytes)
 	
-		NumPut("uint", 104, MONITORINFOEX := BufferAlloc(104))
+		NumPut("uint", 104, MONITORINFOEX := Buffer(104))
 		if (DllCall("user32\GetMonitorInfo", "ptr", hMonitor, "ptr", MONITORINFOEX)){
 			MONITORINFO := Map()
 			MONITORINFO["Handle"]   := hMonitor
@@ -266,10 +266,10 @@ class Monitor {
 			MONITORINFO["WATop"]    := NumGet(MONITORINFOEX, 24, "int")
 			MONITORINFO["WARight"]  := NumGet(MONITORINFOEX, 28, "int")
 			MONITORINFO["WABottom"] := NumGet(MONITORINFOEX, 32, "int")
-			MONITORINFO["Primary"]  := NumGet(MONITORINFOEX, 36, "uint")
+			MONITORINFO["Primary"]  := NumGet(MONITORINFOEX, 36,"uint")
 			return MONITORINFO
 		}
-		throw Exception("GetMonitorInfo: " A_LastError, -1)
+		throw Error("GetMonitorInfo: " A_LastError, -1)
 	}
 		
 	GetMonitorHandle(Display := "", hMonitor := 0, hWindow := 0){
@@ -284,27 +284,27 @@ class Monitor {
 			}
 		}
 
-		if (!hMonitor) ;	MONITOR_DEFAULTTONEAREST = 0x00000002
-			hMonitor := DllCall("user32\MonitorFromWindow", "ptr", hWindow, "uint", 0x00000002)
+		if (!hMonitor)
+			hMonitor := DllCall("user32\MonitorFromWindow", "ptr", hWindow, "uint", 0x00000002) ; MONITOR_DEFAULTTONEAREST = 0x00000002
 		return hMonitor
 	}
 	
 	GetNumberOfPhysicalMonitorsFromHMONITOR(hMonitor, NumberOfPhysicalMonitors := 0){
 
-		if (DllCall("dxva2\GetNumberOfPhysicalMonitorsFromHMONITOR", "ptr", hMonitor, "uint*", NumberOfPhysicalMonitors))
+		if (DllCall("dxva2\GetNumberOfPhysicalMonitorsFromHMONITOR", "ptr", hMonitor, "uint*", &NumberOfPhysicalMonitors))
 			return NumberOfPhysicalMonitors
 		return false
 	}
 	
-	GetPhysicalMonitorsFromHMONITOR(hMonitor, PhysicalMonitorArraySize, ByRef PHYSICAL_MONITOR){
-
-		PHYSICAL_MONITOR := BufferAlloc((A_PtrSize + 256) * PhysicalMonitorArraySize)
+	GetPhysicalMonitorsFromHMONITOR(hMonitor, PhysicalMonitorArraySize, &PHYSICAL_MONITOR){
+        
+		PHYSICAL_MONITOR := Buffer((A_PtrSize + 256) * PhysicalMonitorArraySize)
 		if (DllCall("dxva2\GetPhysicalMonitorsFromHMONITOR", "ptr", hMonitor, "uint", PhysicalMonitorArraySize, "ptr", PHYSICAL_MONITOR))
 			return NumGet(PHYSICAL_MONITOR, 0, "ptr")
 		return false
 	}
 	
-	DestroyPhysicalMonitors(PhysicalMonitorArraySize, PHYSICAL_MONITOR){
+	DestroyPhysicalMonitors(PhysicalMonitorArraySize, &PHYSICAL_MONITOR){
 
 		if (DllCall("dxva2\DestroyPhysicalMonitors", "uint", PhysicalMonitorArraySize, "ptr", PHYSICAL_MONITOR))
 			return true
@@ -333,12 +333,12 @@ class Monitor {
 		if (hMonitor := this.GetMonitorHandle(Display)){
 			PHYSICAL_MONITOR := ""
 			PhysicalMonitors := this.GetNumberOfPhysicalMonitorsFromHMONITOR(hMonitor)
-			hPhysicalMonitor := this.GetPhysicalMonitorsFromHMONITOR(hMonitor, PhysicalMonitors, PHYSICAL_MONITOR)
+			hPhysicalMonitor := this.GetPhysicalMonitorsFromHMONITOR(hMonitor, PhysicalMonitors, &PHYSICAL_MONITOR)
 			Setting := this.%GetMethodName%(hPhysicalMonitor, params*)
-			this.DestroyPhysicalMonitors(PhysicalMonitors, PHYSICAL_MONITOR)
+			this.DestroyPhysicalMonitors(PhysicalMonitors, &PHYSICAL_MONITOR)
 			return Setting
 		}
-		throw Exception("Unable to get handle to monitor.`n`nError code: " Format("0x{:X}", A_LastError))
+		throw Error("Unable to get handle to monitor.`n`nError code: " Format("0x{:X}", A_LastError))
 	}
 	
 	SetSetting(SetMethodName, Setting, Display := "", params*){
@@ -346,11 +346,11 @@ class Monitor {
 		if (hMonitor := this.GetMonitorHandle(Display)){	
 			PHYSICAL_MONITOR := ""		
 			PhysicalMonitors := this.GetNumberOfPhysicalMonitorsFromHMONITOR(hMonitor)
-			hPhysicalMonitor := this.GetPhysicalMonitorsFromHMONITOR(hMonitor, PhysicalMonitors, PHYSICAL_MONITOR)
+			hPhysicalMonitor := this.GetPhysicalMonitorsFromHMONITOR(hMonitor, PhysicalMonitors, &PHYSICAL_MONITOR)
 
 			if (SetMethodName = "SetMonitorVCPFeature" || SetMethodName = "SetMonitorColorTemperature"){				
 				Setting := this.%SetMethodName%(hPhysicalMonitor, Setting, params*)
-				this.DestroyPhysicalMonitors(PhysicalMonitors, PHYSICAL_MONITOR)
+				this.DestroyPhysicalMonitors(PhysicalMonitors, &PHYSICAL_MONITOR)
 				return Setting				
 			}
 			else {	
@@ -360,166 +360,181 @@ class Monitor {
 					    :  (Setting > GetSetting["Maximum"]) ? GetSetting["Maximum"]
 					    :  (Setting)
 				this.%SetMethodName%(hPhysicalMonitor, Setting)
-				this.DestroyPhysicalMonitors(PhysicalMonitors, PHYSICAL_MONITOR)
+				this.DestroyPhysicalMonitors(PhysicalMonitors, &PHYSICAL_MONITOR)
 				return Setting
 			}
 		
 		} 
-		throw Exception("Unable to get handle to monitor.`n`nError code: " Format("0x{:X}", A_LastError))
+		throw Error("Unable to get handle to monitor.`n`nError code: " Format("0x{:X}", A_LastError))
 	}
 	
-	VoidSetting(VoidMethodName, Display := ""){
+	VoidSetting(VoidMethodName, Display := ""){        
 
 		if (hMonitor := this.GetMonitorHandle(Display)){
 			PHYSICAL_MONITOR := ""
 			PhysicalMonitors := this.GetNumberOfPhysicalMonitorsFromHMONITOR(hMonitor)
-			hPhysicalMonitor := this.GetPhysicalMonitorsFromHMONITOR(hMonitor, PhysicalMonitors, PHYSICAL_MONITOR)
+			hPhysicalMonitor := this.GetPhysicalMonitorsFromHMONITOR(hMonitor, PhysicalMonitors, &PHYSICAL_MONITOR)
 			bool := this.%VoidMethodName%(hPhysicalMonitor)
-			this.DestroyPhysicalMonitors(PhysicalMonitors, PHYSICAL_MONITOR)
+			this.DestroyPhysicalMonitors(PhysicalMonitors, &PHYSICAL_MONITOR)
 			return bool
 		}
-		throw Exception("Unable to get handle to monitor.`n`nError code: " Format("0x{:X}", A_LastError))
+		throw Error("Unable to get handle to monitor.`n`nError code: " Format("0x{:X}", A_LastError))
 	}
 	
-	GammaSetting(GammaMethodName, Red := "", Green := "", Blue := "", Display := "", DisplayName := ""){
+	GammaSetting(GammaMethodName, Red := "", Green := "", Blue := "", Display := ""){
+    
+        MonitorInfo := this.EnumDisplayMonitors() ; might be able to find a better way to write this if-else code section below
 
-		if (Display = "" && MonitorInfo := this.EnumDisplayMonitors()){
-			for Info in MonitorInfo {
-				if (Info["Primary"]){
-					PrimaryMonitor := A_Index
-					break
-				}
-			}
-		}
+        if (!Display){                      ; if no display # is passed, default to primary
+            for Info in MonitorInfo {                                               
+                if (Info["Primary"]){                                  
+                    Display := A_Index                                 
+                    break                                              
+                }                                                                                 
+            }          
+        }
+        else if (!IsNumber(Display)){       ; if a display name is passed, determine which display # belongs to it
+            for Info in MonitorInfo {                                   
+                if (MonitorInfo[A_Index]["Name"] = Display){           
+                    Display := A_Index                                 
+                    break                                              
+                }       
+            }
+        }
 
-		if (DisplayName := MonitorInfo[Display ? Display : PrimaryMonitor]["Name"]){
-			if (hDC := this.CreateDC(DisplayName)){	
-				if (GammaMethodName = "SetDeviceGammaRamp"){
-					for Color in ["Red", "Green", "Blue"]{
-						%Color% := (%Color% <    0)	?    0 
-						 	    :  (%Color% >  100) ?  100
-							    :  (%Color%)	
-						%Color% := Round((2.56 * %Color%) - 128, 1) ; convert to decimal	
-					}			
-					this.SetDeviceGammaRamp(hDC, Red, Green, Blue)
-					this.DeleteDC(hDC)
-					
-					for Color in ["Red", "Green", "Blue"]
-						%Color% := Round((%Color% + 128) / 2.56, 1) ; convert back to percentage	
+        if (Display > MonitorInfo.Length){  ; if an invalid monitor # is passed, default to primary monitor #             
+            for Info in MonitorInfo {                                               
+                if (Info["Primary"]){                                  
+                    Display := A_Index                                 
+                    break                                              
+                }                                                                                 
+            }          
+        }                    
 
-					return Map("Red", Red, "Green", Green, "Blue", Blue)
-				}
-				else { ; if (GammaMethodName = "GetDeviceGammaRamp")
-					GammaRamp := this.GetDeviceGammaRamp(hDC)	
-					for Color, GammaLevel in GammaRamp		
-						GammaRamp[Color] := Round((GammaLevel + 128) / 2.56, 1) ; convert to percentage		
-					this.DeleteDC(hDC)
-					return GammaRamp
-				}
-			
-			
-			}
-			this.DeleteDC(hDC)
-			throw Exception("Unable to get handle to Device Context.`n`nError code: " Format("0x{:X}", A_LastError))
-		}	
-	
+        if (hDC := this.CreateDC(MonitorInfo[Display]["Name"])){	
+            if (GammaMethodName = "SetDeviceGammaRamp"){
+                for Color in ["Red", "Green", "Blue"]{
+                    %Color% := (%Color% <    0)	?    0  ; ensure values passed are within the valid ranges
+                            :  (%Color% >  100) ?  100
+                            :  (%Color%)	
+                    %Color% := Round((2.56 * %Color%) - 128, 1) ; convert RGB values to decimal	(function-compatible)
+                }			
+                this.SetDeviceGammaRamp(hDC, Red, Green, Blue)
+                this.DeleteDC(hDC)
+                
+                for Color in ["Red", "Green", "Blue"]
+                    %Color% := Round((%Color% + 128) / 2.56, 1) ; convert RBG values back to percentage	(human-readable)
+
+                return Map("Red", Red, "Green", Green, "Blue", Blue)
+            }
+            else { ; if (GammaMethodName = "GetDeviceGammaRamp")
+                GammaRamp := this.GetDeviceGammaRamp(hDC)	
+                for Color, GammaLevel in GammaRamp		
+                    GammaRamp[Color] := Round((GammaLevel + 128) / 2.56, 1) ; convert RGB values to percentage (human-readable)
+                this.DeleteDC(hDC)
+                return GammaRamp
+            }			
+        
+        }
+        this.DeleteDC(hDC)
+        throw Error("Unable to get handle to Device Context.`n`nError code: " Format("0x{:X}", A_LastError))	
 	}
 	
 	; ===== GET METHODS ===== ;
 	
 	GetMonitorBrightness(hMonitor, Minimum := 0, Current := 0, Maximum := 0){
-
-		if (DllCall("dxva2\GetMonitorBrightness", "ptr", hMonitor, "uint*", Minimum, "uint*", Current, "uint*", Maximum))
+       
+		if (DllCall("dxva2\GetMonitorBrightness", "ptr", hMonitor, "uint*", &Minimum, "uint*", &Current, "uint*", &Maximum))
 			return Map("Minimum", Minimum, "Current", Current, "Maximum", Maximum)
-		throw Exception("Unable to retreive values.`n`nError code: " Format("0x{:X}", A_LastError))
+		throw Error("Unable to retreive values.`n`nError code: " Format("0x{:X}", A_LastError))
 	}
 	
 	GetMonitorContrast(hMonitor, Minimum := 0, Current := 0, Maximum := 0){
 
-		if (DllCall("dxva2\GetMonitorContrast", "ptr", hMonitor, "uint*", Minimum, "uint*", Current, "uint*", Maximum))
+		if (DllCall("dxva2\GetMonitorContrast", "ptr", hMonitor, "uint*", &Minimum, "uint*", &Current, "uint*", &Maximum))
 			return Map("Minimum", Minimum, "Current", Current, "Maximum", Maximum)
-		throw Exception("Unable to retreive values.`n`nError code: " Format("0x{:X}", A_LastError))
+		throw Error("Unable to retreive values.`n`nError code: " Format("0x{:X}", A_LastError))
 	}
 	
 	GetDeviceGammaRamp(hMonitor){
 					
-		if (DllCall("gdi32\GetDeviceGammaRamp", "ptr", hMonitor, "ptr", GAMMA_RAMP := BufferAlloc(1536)))
+		if (DllCall("gdi32\GetDeviceGammaRamp", "ptr", hMonitor, "ptr", GAMMA_RAMP := Buffer(1536)))
 			return Map(
-			"Red"  , NumGet(GAMMA_RAMP,        2, "ushort") - 128,
-			"Green", NumGet(GAMMA_RAMP,  512 + 2, "ushort") - 128,
-			"Blue" , NumGet(GAMMA_RAMP, 1024 + 2, "ushort") - 128)
-		throw Exception("Unable to retreive values.`n`nError code: " Format("0x{:X}", A_LastError))
+			"Red"  , NumGet(GAMMA_RAMP.Ptr,        2, "ushort") - 128,
+			"Green", NumGet(GAMMA_RAMP.Ptr,  512 + 2, "ushort") - 128,
+			"Blue" , NumGet(GAMMA_RAMP.Ptr, 1024 + 2, "ushort") - 128)
+		throw Error("Unable to retreive values.`n`nError code: " Format("0x{:X}", A_LastError))
 	}
 	
 	GetMonitorRedDrive(hMonitor, Minimum := 0, Current := 0, Maximum := 0){ ;	MC_RED_DRIVE = 0x00000000
 		
-		if (DllCall("dxva2\GetMonitorRedGreenOrBlueDrive", "ptr", hMonitor, "ptr", 0x00000000, "uint*", Minimum, "uint*", Current, "uint*", Maximum))
+		if (DllCall("dxva2\GetMonitorRedGreenOrBlueDrive", "ptr", hMonitor, "ptr", 0x00000000, "uint*", &Minimum, "uint*", &Current, "uint*", &Maximum))
 			return Map("Minimum", Minimum, "Current", Current, "Maximum", Maximum)
-		throw Exception("Unable to retreive values.`n`nError code: " Format("0x{:X}", A_LastError))
+		throw Error("Unable to retreive values.`n`nError code: " Format("0x{:X}", A_LastError))
 	}
 	
 	GetMonitorGreenDrive(hMonitor, Minimum := 0, Current := 0, Maximum := 0){ ;	MC_GREEN_DRIVE = 0x00000001
 		
-		if (DllCall("dxva2\GetMonitorRedGreenOrBlueDrive", "ptr", hMonitor, "ptr", 0x00000001, "uint*", Minimum, "uint*", Current, "uint*", Maximum))
+		if (DllCall("dxva2\GetMonitorRedGreenOrBlueDrive", "ptr", hMonitor, "ptr", 0x00000001, "uint*", &Minimum, "uint*", &Current, "uint*", &Maximum))
 			return Map("Minimum", Minimum, "Current", Current, "Maximum", Maximum)
-		throw Exception("Unable to retreive values.`n`nError code: " Format("0x{:X}", A_LastError))
+		throw Error("Unable to retreive values.`n`nError code: " Format("0x{:X}", A_LastError))
 	}
 	
 	GetMonitorBlueDrive(hMonitor, Minimum := 0, Current := 0, Maximum := 0){ ;	MC_BLUE_DRIVE = 0x00000002
 		
-		if (DllCall("dxva2\GetMonitorRedGreenOrBlueDrive", "ptr", hMonitor, "ptr", 0x00000002, "uint*", Minimum, "uint*", Current, "uint*", Maximum))
+		if (DllCall("dxva2\GetMonitorRedGreenOrBlueDrive", "ptr", hMonitor, "ptr", 0x00000002, "uint*", &Minimum, "uint*", &Current, "uint*", &Maximum))
 			return Map("Minimum", Minimum, "Current", Current, "Maximum", Maximum)
 		MsgBox "Failed"
-		throw Exception("Unable to retreive values.`n`nError code: " Format("0x{:X}", A_LastError))
+		throw Error("Unable to retreive values.`n`nError code: " Format("0x{:X}", A_LastError))
 	}
 	
 	GetMonitorRedGain(hMonitor, Minimum := 0, Current := 0, Maximum := 0){ ;	MC_RED_GAIN = 0x00000000
 		
-		if (DllCall("dxva2\GetMonitorRedGreenOrBlueGain", "ptr", hMonitor, "ptr", 0x00000000, "uint*", Minimum, "uint*", Current, "uint*", Maximum))
+		if (DllCall("dxva2\GetMonitorRedGreenOrBlueGain", "ptr", hMonitor, "ptr", 0x00000000, "uint*", &Minimum, "uint*", &Current, "uint*", &Maximum))
 			return Map("Minimum", Minimum, "Current", Current, "Maximum", Maximum)
-		throw Exception("Unable to retreive values.`n`nError code: " Format("0x{:X}", A_LastError))
+		throw Error("Unable to retreive values.`n`nError code: " Format("0x{:X}", A_LastError))
 	}
 	
 	GetMonitorGreenGain(hMonitor, Minimum := 0, Current := 0, Maximum := 0){ ;	MC_GREEN_GAIN = 0x00000001
 		
-		if (DllCall("dxva2\GetMonitorRedGreenOrBlueGain", "ptr", hMonitor, "ptr", 0x00000001, "uint*", Minimum, "uint*", Current, "uint*", Maximum))
+		if (DllCall("dxva2\GetMonitorRedGreenOrBlueGain", "ptr", hMonitor, "ptr", 0x00000001, "uint*", &Minimum, "uint*", &Current, "uint*", &Maximum))
 			return Map("Minimum", Minimum, "Current", Current, "Maximum", Maximum)
-		throw Exception("Unable to retreive values.`n`nError code: " Format("0x{:X}", A_LastError))
+		throw Error("Unable to retreive values.`n`nError code: " Format("0x{:X}", A_LastError))
 	}
 	
 	GetMonitorBlueGain(hMonitor, Minimum := 0, Current := 0, Maximum := 0){ ;	MC_BLUE_GAIN = 0x00000002
-		
-		if (DllCall("dxva2\GetMonitorRedGreenOrBlueGain", "ptr", hMonitor, "ptr", 0x00000002, "uint*", Minimum, "uint*", Current, "uint*", Maximum))
+	
+		if (DllCall("dxva2\GetMonitorRedGreenOrBlueGain", "ptr", hMonitor, "ptr", 0x00000002, "uint*", &Minimum, "uint*", &Current, "uint*", &Maximum))
 			return Map("Minimum", Minimum, "Current", Current, "Maximum", Maximum)
-		throw Exception("Unable to retreive values.`n`nError code: " Format("0x{:X}", A_LastError))
+		throw Error("Unable to retreive values.`n`nError code: " Format("0x{:X}", A_LastError))
 	}	
 	
 	GetMonitorDisplayAreaWidth(hMonitor, Minimum := 0, Current := 0, Maximum := 0){ ;	MC_WIDTH = 0x00000000
 		
-		if (DllCall("dxva2\GetMonitorDisplayAreaSize", "ptr", hMonitor, "ptr", 0x00000000, "uint*", Minimum, "uint*", Current, "uint*", Maximum))
+		if (DllCall("dxva2\GetMonitorDisplayAreaSize", "ptr", hMonitor, "ptr", 0x00000000, "uint*", &Minimum, "uint*", &Current, "uint*", &Maximum))
 			return Map("Minimum", Minimum, "Current", Current, "Maximum", Maximum)
-		throw Exception("Unable to retreive values.`n`nError code: " Format("0x{:X}", A_LastError))
+		throw Error("Unable to retreive values.`n`nError code: " Format("0x{:X}", A_LastError))
 	}
 	
 	GetMonitorDisplayAreaHeight(hMonitor, Minimum := 0, Current := 0, Maximum := 0){ ;	MC_HEIGHT = 0x00000001
-		
-		if (DllCall("dxva2\GetMonitorDisplayAreaSize", "ptr", hMonitor, "ptr", 0x00000001, "uint*", Minimum, "uint*", Current, "uint*", Maximum))
+	
+		if (DllCall("dxva2\GetMonitorDisplayAreaSize", "ptr", hMonitor, "ptr", 0x00000001, "uint*", &Minimum, "uint*", &Current, "uint*", &Maximum))
 			return Map("Minimum", Minimum, "Current", Current, "Maximum", Maximum)
-		throw Exception("Unable to retreive values.`n`nError code: " Format("0x{:X}", A_LastError))
+		throw Error("Unable to retreive values.`n`nError code: " Format("0x{:X}", A_LastError))
 	}
 	
 	GetMonitorDisplayAreaPositionHorizontal(hMonitor, Minimum := 0, Current := 0, Maximum := 0){ ;	MC_HORIZONTAL_POSITION = 0x00000000
 		
-		if (DllCall("dxva2\GetMonitorDisplayAreaPosition", "ptr", hMonitor, "ptr", 0x00000000, "uint*", Minimum, "uint*", Current, "uint*", Maximum))
+		if (DllCall("dxva2\GetMonitorDisplayAreaPosition", "ptr", hMonitor, "ptr", 0x00000000, "uint*", &Minimum, "uint*", &Current, "uint*", &Maximum))
 			return Map("Minimum", Minimum, "Current", Current, "Maximum", Maximum)
-		throw Exception("Unable to retreive values.`n`nError code: " Format("0x{:X}", A_LastError))
+		throw Error("Unable to retreive values.`n`nError code: " Format("0x{:X}", A_LastError))
 	}
 	
 	GetMonitorDisplayAreaPositionVertical(hMonitor, Minimum := 0, Current := 0, Maximum := 0){ ;	MC_VERTICAL_POSITION = 0x00000001
 		
-		if (DllCall("dxva2\GetMonitorDisplayAreaPosition", "ptr", hMonitor, "ptr", 0x00000001, "uint*", Minimum, "uint*", Current, "uint*", Maximum))
+		if (DllCall("dxva2\GetMonitorDisplayAreaPosition", "ptr", hMonitor, "ptr", 0x00000001, "uint*", &Minimum, "uint*", &Current, "uint*", &Maximum))
 			return Map("Minimum", Minimum, "Current", Current, "Maximum", Maximum)
-		throw Exception("Unable to retreive values.`n`nError code: " Format("0x{:X}", A_LastError))
+		throw Error("Unable to retreive values.`n`nError code: " Format("0x{:X}", A_LastError))
 	}	
 	
 	GetVCPFeatureAndVCPFeatureReply(hMonitor, VCPCode, vct := 0, CurrentValue := 0, MaximumValue := 0){
@@ -528,50 +543,51 @@ class Monitor {
 					0x00000000, "MC_MOMENTARY — Momentary VCP code. Sending a command of this type causes the monitor to initiate a self-timed operation and then revert to its original state. Examples include display tests and degaussing.",
 					0x00000001, "MC_SET_PARAMETER — Set Parameter VCP code. Sending a command of this type changes some aspect of the monitor's operation.")
 		
-		if (DllCall("dxva2\GetVCPFeatureAndVCPFeatureReply", "ptr", hMonitor, "ptr", VCPCode, "uint*", vct, "uint*", CurrentValue, "uint*", MaximumValue))
+		if (DllCall("dxva2\GetVCPFeatureAndVCPFeatureReply", "ptr", hMonitor, "ptr", VCPCode, "uint*", vct, "uint*", &CurrentValue, "uint*", &MaximumValue))
 			return Map("VCPCode"    ,  Format("0x{:X}", VCPCode),
 					   "VCPCodeType",  VCP_CODE_TYPE[vct], 
 					   "Current"	,  CurrentValue, 
 					   "Maximum"	, (MaximumValue ? MaximumValue : "Undefined due to non-continuous (NC) VCP Code."))
-		throw Exception("Unable to retreive values.`n`nError code: " Format("0x{:X}", A_LastError))
+		throw Error("Unable to retreive values.`n`nError code: " Format("0x{:X}", A_LastError))
 	}
 	
 	GetMonitorCapabilitiesStringLength(hMonitor, CapabilitiesStrLen := 0){
 
-		if (DllCall("dxva2\GetCapabilitiesStringLength", "ptr", hMonitor, "uint*", CapabilitiesStrLen))
+		if (DllCall("dxva2\GetCapabilitiesStringLength", "ptr", hMonitor, "uint*", &CapabilitiesStrLen))
 			return CapabilitiesStrLen
-		throw Exception("Unable to retreive values.`n`nError code: " Format("0x{:X}", A_LastError))
+		throw Error("Unable to retreive values.`n`nError code: " Format("0x{:X}", A_LastError))
 	}
 	
 	MonitorCapabilitiesRequestAndCapabilitiesReply(hMonitor, ASCIICapabilitiesString := "", CapabilitiesStrLen := 0){
 
-		CapabilitiesStrLen := this.GetMonitorCapabilitiesStringLength(hMonitor)
-		ASCIICapabilitiesString := BufferAlloc(CapabilitiesStrLen)
-		if (DllCall("dxva2\GetCapabilitiesStringLength", "ptr", hMonitor, "ptr", ASCIICapabilitiesString.Ptr, "uint", CapabilitiesStrLen))
-			return ASCIICapabilitiesString
-		throw Exception("Unable to retreive value.`n`nError code: " Format("0x{:X}", A_LastError))
+		if (CapabilitiesStrLen := this.GetMonitorCapabilitiesStringLength(hMonitor)){
+            ASCIICapabilitiesString := Buffer(CapabilitiesStrLen)
+            if (DllCall("dxva2\GetCapabilitiesStringLength", "ptr", hMonitor, "ptr", ASCIICapabilitiesString.Ptr, "uint", CapabilitiesStrLen))
+                return ASCIICapabilitiesString			
+		}
+        throw Error("Unable to retreive value.`n`nError code: " Format("0x{:X}", A_LastError))
 	}	
 	
 	GetMonitorCapabilities(hMonitor, MonitorCapabilities := 0, SupportedColorTemperatures := 0){
 
-		if (DllCall("dxva2\GetMonitorCapabilities", "ptr", hMonitor, "uint*", MonitorCapabilities, "uint*", SupportedColorTemperatures))
+		if (DllCall("dxva2\GetMonitorCapabilities", "ptr", hMonitor, "uint*", &MonitorCapabilities, "uint*", &SupportedColorTemperatures))
 			return Map("MonitorCapabilities"	   , MonitorCapabilities, 
 				  	   "SupportedColorTemperatures", SupportedColorTemperatures)		
-		throw Exception("Unable to retreive values.`n`nError code: " Format("0x{:X}", A_LastError))
+		throw Error("Unable to retreive values.`n`nError code: " Format("0x{:X}", A_LastError))
 	}
 	
 	GetMonitorColorTemperature(hMonitor, CurrentColorTemperature := 0){
 
 		if (DllCall("dxva2\GetMonitorColorTemperature", "ptr", hMonitor, "uint*", CurrentColorTemperature))
 			return CurrentColorTemperature
-		throw Exception("Unable to retreive value.`n`nError code: " Format("0x{:X}", A_LastError))
+		throw Error("Unable to retreive value.`n`nError code: " Format("0x{:X}", A_LastError))
 	}
 	
 	GetMonitorTechnologyType(hMonitor, DisplayTechnologyType := 0){
 
-		if (DllCall("dxva2\GetMonitorTechnologyType", "ptr", hMonitor, "uint*", DisplayTechnologyType))
+		if (DllCall("dxva2\GetMonitorTechnologyType", "ptr", hMonitor, "uint*", &DisplayTechnologyType))
 			return DisplayTechnologyType
-		throw Exception("Unable to retreive value.`n`nError code: " Format("0x{:X}", A_LastError))
+		throw Error("Unable to retreive value.`n`nError code: " Format("0x{:X}", A_LastError))
 	}
 	
 	
@@ -581,19 +597,19 @@ class Monitor {
 
 		if (DllCall("dxva2\SetMonitorBrightness", "ptr", hMonitor, "uint", Brightness))
 			return Brightness
-		throw Exception("Unable to set value.`n`nError code: " Format("0x{:X}", A_LastError))
+		throw Error("Unable to set value.`n`nError code: " Format("0x{:X}", A_LastError))
 	}
 	
 	SetMonitorContrast(hMonitor, Contrast){
 
 		if (DllCall("dxva2\SetMonitorContrast", "ptr", hMonitor, "uint", Contrast))
 			return Contrast
-		throw Exception("Unable to set value.`n`nError code: " Format("0x{:X}", A_LastError))
+		throw Error("Unable to set value.`n`nError code: " Format("0x{:X}", A_LastError))
 	}
 	
 	SetDeviceGammaRamp(hMonitor, red, green, blue){
 
-		GAMMA_RAMP := BufferAlloc(1536)	
+        GAMMA_RAMP := Buffer(1536)
 		while ((i := A_Index - 1) < 256 ){	
 			NumPut("ushort", (r := (red   + 128) * i) > 65535 ? 65535 : r, GAMMA_RAMP,        2 * i)
 			NumPut("ushort", (g := (green + 128) * i) > 65535 ? 65535 : g, GAMMA_RAMP,  512 + 2 * i)
@@ -601,91 +617,91 @@ class Monitor {
 		}
 		if (DllCall("gdi32\SetDeviceGammaRamp", "ptr", hMonitor, "ptr", GAMMA_RAMP))
 			return true
-		throw Exception("Unable to set values.`n`nError code: " Format("0x{:X}", A_LastError))
+		throw Error("Unable to set values.`n`nError code: " Format("0x{:X}", A_LastError))
 	}	
 	
 	SetMonitorRedDrive(hMonitor, RedDrive){ ;	MC_RED_DRIVE = 0x00000000
 		
 		if (DllCall("dxva2\SetMonitorRedGreenOrBlueDrive", "ptr", hMonitor, "ptr", 0x00000000, "uint", RedDrive))
 			return true
-		throw Exception("Unable to set value.`n`nError code: " Format("0x{:X}", A_LastError))
+		throw Error("Unable to set value.`n`nError code: " Format("0x{:X}", A_LastError))
 	}
 	
 	SetMonitorGreenDrive(hMonitor, GreenDrive){ ;	MC_GREEN_DRIVE = 0x00000001
 		
 		if (DllCall("dxva2\SetMonitorRedGreenOrBlueDrive", "ptr", hMonitor, "ptr", 0x00000001, "uint", GreenDrive))
 			return true
-		throw Exception("Unable to set value.`n`nError code: " Format("0x{:X}", A_LastError))
+		throw Error("Unable to set value.`n`nError code: " Format("0x{:X}", A_LastError))
 	}
 	
 	SetMonitorBlueDrive(hMonitor, BlueDrive){ ;	MC_BLUE_DRIVE = 0x00000002
 		
 		if (DllCall("dxva2\SetMonitorRedGreenOrBlueDrive", "ptr", hMonitor, "ptr", 0x00000002, "uint", BlueDrive))
 			return true
-		throw Exception("Unable to set value.`n`nError code: " Format("0x{:X}", A_LastError))
+		throw Error("Unable to set value.`n`nError code: " Format("0x{:X}", A_LastError))
 	}
 	
 	SetMonitorRedGain(hMonitor, RedGain){ ;	MC_RED_GAIN = 0x00000000
 		
 		if (DllCall("dxva2\SetMonitorRedGreenOrBlueGain", "ptr", hMonitor, "ptr", 0x00000000, "uint", RedGain))
 			return true
-		throw Exception("Unable to set value.`n`nError code: " Format("0x{:X}", A_LastError))
+		throw Error("Unable to set value.`n`nError code: " Format("0x{:X}", A_LastError))
 	}
 	
 	SetMonitorGreenGain(hMonitor, GreenGain){ ;	MC_GREEN_GAIN = 0x00000001
 		
 		if (DllCall("dxva2\SetMonitorRedGreenOrBlueGain", "ptr", hMonitor, "ptr", 0x00000001, "uint", GreenGain))
 			return true
-		throw Exception("Unable to set value.`n`nError code: " Format("0x{:X}", A_LastError))
+		throw Error("Unable to set value.`n`nError code: " Format("0x{:X}", A_LastError))
 	}
 	
 	SetMonitorBlueGain(hMonitor, BlueGain){ ;	MC_BLUE_GAIN = 0x00000002
 		
 		if (DllCall("dxva2\SetMonitorRedGreenOrBlueGain", "ptr", hMonitor, "ptr", 0x00000002, "uint", BlueGain))
 			return true
-		throw Exception("Unable to set value.`n`nError code: " Format("0x{:X}", A_LastError))
+		throw Error("Unable to set value.`n`nError code: " Format("0x{:X}", A_LastError))
 	}		
 	
 	SetMonitorDisplayAreaWidth(hMonitor, DisplayAreaWidth){ ;	MC_WIDTH = 0x00000000
 		 
 		if (DllCall("dxva2\SetMonitorDisplayAreaSize", "ptr", hMonitor, "ptr", 0x00000000, "uint", DisplayAreaWidth))
 			return true
-		throw Exception("Unable to set value.`n`nError code: " Format("0x{:X}", A_LastError))
+		throw Error("Unable to set value.`n`nError code: " Format("0x{:X}", A_LastError))
 	}
 	
 	SetMonitorDisplayAreaHeight(hMonitor, DisplayAreaHeight){ ;	MC_HEIGHT = 0x00000001
 		
 		if (DllCall("dxva2\SetMonitorDisplayAreaSize", "ptr", hMonitor, "ptr", 0x00000001, "uint", DisplayAreaHeight))
 			return true
-		throw Exception("Unable to set value.`n`nError code: " Format("0x{:X}", A_LastError))
+		throw Error("Unable to set value.`n`nError code: " Format("0x{:X}", A_LastError))
 	}
 	
 	SetMonitorDisplayAreaPositionHorizontal(hMonitor, NewHorizontalPosition){ ;	MC_HORIZONTAL_POSITION = 0x00000000
 		 
 		if (DllCall("dxva2\SetMonitorDisplayAreaPosition", "ptr", hMonitor, "ptr", 0x00000000, "uint", NewHorizontalPosition))
 			return true
-		throw Exception("Unable to set value.`n`nError code: " Format("0x{:X}", A_LastError))
+		throw Error("Unable to set value.`n`nError code: " Format("0x{:X}", A_LastError))
 	}	
 	
 	SetMonitorDisplayAreaPositionVertical(hMonitor, NewVerticalPosition){ ;	MC_VERTICAL_POSITION = 0x00000001
 		
 		if (DllCall("dxva2\SetMonitorDisplayAreaPosition", "ptr", hMonitor, "ptr", 0x00000001, "uint", NewVerticalPosition))
 			return true
-		throw Exception("Unable to set value.`n`nError code: " Format("0x{:X}", A_LastError))
+		throw Error("Unable to set value.`n`nError code: " Format("0x{:X}", A_LastError))
 	}	
 	
 	SetMonitorVCPFeature(hMonitor, VCPCode, NewValue){
 
 		if (DllCall("dxva2\SetVCPFeature", "ptr", hMonitor, "ptr", VCPCode, "uint", NewValue))
 			return Map("VCPCode", Format("0x{:X}", VCPCode), "NewValue", NewValue)
-		throw Exception("Unable to set value.`n`nError code: " Format("0x{:X}", A_LastError))
+		throw Error("Unable to set value.`n`nError code: " Format("0x{:X}", A_LastError))
 	}		
 	
 	SetMonitorColorTemperature(hMonitor, CurrentColorTemperature){
 
 		if (DllCall("dxva2\SetMonitorColorTemperature", "ptr", hMonitor, "uint", CurrentColorTemperature))
 			return CurrentColorTemperature
-		throw Exception("Unable to set value.`n`nError code: " Format("0x{:X}", A_LastError))
+		throw Error("Unable to set value.`n`nError code: " Format("0x{:X}", A_LastError))
 	}
 	
 	
@@ -695,27 +711,27 @@ class Monitor {
 
 		if (DllCall("dxva2\DegaussMonitor", "ptr", hMonitor))
 			return true
-		throw Exception("Unable to degauss monitor.`n`nError code: " Format("0x{:X}", A_LastError))
+		throw Error("Unable to degauss monitor.`n`nError code: " Format("0x{:X}", A_LastError))
 	}
 	
 	RestoreMonitorFactoryDefaults(hMonitor){
 
 		if (DllCall("dxva2\RestoreMonitorFactoryDefaults", "ptr", hMonitor))
 			return true
-		throw Exception("Unable to restore monitor to factory defaults.`n`nError code: " Format("0x{:X}", A_LastError))
+		throw Error("Unable to restore monitor to factory defaults.`n`nError code: " Format("0x{:X}", A_LastError))
 	}
 	
 	RestoreMonitorFactoryColorDefaults(hMonitor){
 
 		if (DllCall("dxva2\RestoreMonitorFactoryColorDefaults", "ptr", hMonitor))
 			return true
-		throw Exception("Unable to restore monitor to factory color defaults.`n`nError code: " Format("0x{:X}", A_LastError))
+		throw Error("Unable to restore monitor to factory color defaults.`n`nError code: " Format("0x{:X}", A_LastError))
 	}
 	
 	SaveCurrentMonitorSettings(hMonitor){
 
 		if (DllCall("dxva2\RestoreMonitorFactoryDefaults", "ptr", hMonitor))
 			return true
-		throw Exception("Unable to save current monitor settings to non-volatile storage.`n`nError code: " Format("0x{:X}", A_LastError))
+		throw Error("Unable to save current monitor settings to non-volatile storage.`n`nError code: " Format("0x{:X}", A_LastError))
 	}	
 }
